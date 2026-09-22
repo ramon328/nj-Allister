@@ -6,6 +6,7 @@ import {
 import { useFinePointer, useSpotlight } from "../hooks/useMotion";
 import { gsap, ScrollTrigger, SplitText, reduced } from "../lib/motion";
 import { ArrowIcon, Button, Eyebrow, LinkUnderline } from "./ui";
+import { GiantWord, ImageTrail, Orbs, RingText } from "./Decor";
 
 /* ------------------------------------------------------------------------
    Hero — char reveal, video settle, mouse parallax, scroll "cover" fade
@@ -54,7 +55,16 @@ export function Hero({ ready }: { ready: boolean }) {
           .from(leadSplit.lines, { yPercent: 110, duration: 1.2, stagger: 0.08 }, 0.8)
           .from(root.querySelectorAll(".hero__cta > *"), { y: 34, opacity: 0, duration: 1.1, stagger: 0.1 }, 1.0)
           .from(root.querySelector(".hero__foot"), { y: 24, opacity: 0, duration: 1 }, 1.2)
-          .from(root.querySelectorAll(".hero__pills li"), { y: 14, opacity: 0, stagger: 0.06, duration: 0.8 }, 1.3);
+          .from(root.querySelectorAll(".hero__pills li"), { y: 14, opacity: 0, stagger: 0.06, duration: 0.8 }, 1.3)
+          .from(root.querySelectorAll(".chip"), { scale: 0, rotate: () => gsap.utils.random(-40, 40), opacity: 0, duration: 1.6, stagger: 0.12, ease: "expo.out" }, 0.9);
+
+        // Chips float gently, each on its own rhythm.
+        root.querySelectorAll<HTMLElement>(".chip").forEach((chip, i) => {
+          gsap.to(chip.firstElementChild, {
+            y: () => gsap.utils.random(-14, 14), rotate: () => gsap.utils.random(-5, 5),
+            duration: () => gsap.utils.random(3.5, 5.5), ease: "sine.inOut", repeat: -1, yoyo: true, repeatRefresh: true, delay: i * 0.4,
+          });
+        });
 
         // Scroll: content lifts and fades while the next section covers the hero.
         const page = document.querySelector(".page");
@@ -83,10 +93,16 @@ export function Hero({ ready }: { ready: boolean }) {
     const cy = gsap.quickTo(content, "y", { duration: 1.2, ease: "power3" });
     const mx = gsap.quickTo(media, "x", { duration: 1.6, ease: "power3" });
     const my = gsap.quickTo(media, "y", { duration: 1.6, ease: "power3" });
+    const chips = Array.from(root.querySelectorAll<HTMLElement>(".chip")).map((el) => ({
+      depth: Number(el.dataset.depth ?? 1),
+      x: gsap.quickTo(el, "x", { duration: 1.4, ease: "power3" }),
+      y: gsap.quickTo(el, "y", { duration: 1.4, ease: "power3" }),
+    }));
     const onMove = (e: PointerEvent) => {
       const nx = e.clientX / window.innerWidth - 0.5;
       const ny = e.clientY / window.innerHeight - 0.5;
       cx(nx * 18); cy(ny * 12); mx(nx * -22); my(ny * -14);
+      chips.forEach((c) => { c.x(nx * -60 * c.depth); c.y(ny * -40 * c.depth); });
     };
     if (window.matchMedia("(hover: hover)").matches) root.addEventListener("pointermove", onMove);
 
@@ -111,6 +127,12 @@ export function Hero({ ready }: { ready: boolean }) {
         >
           <source src={videoSrc} type="video/mp4" />
         </video>
+      </div>
+      <div className="hero__chips" aria-hidden="true">
+        <div className="chip chip--1" data-depth="1.4"><figure><img src="/assets/web/ig-03.jpg" alt="" /></figure></div>
+        <div className="chip chip--2" data-depth="0.8"><figure><img src="/assets/web/ig-11.jpg" alt="" /></figure></div>
+        <div className="chip chip--3" data-depth="1.1"><figure><img src="/assets/web/ig-12.jpg" alt="" /></figure></div>
+        <div className="chip chip--4" data-depth="0.6"><figure><img src="/assets/web/ig-05.jpg" alt="" /></figure></div>
       </div>
       <div className="hero__content">
         <Eyebrow className="hero__eyebrow">Colección LUXE · Envío gratis</Eyebrow>
@@ -222,6 +244,8 @@ function CollectionCard({ c, index }: { c: Collection; index: number }) {
 export function Collections() {
   return (
     <section className="section collections" id="colecciones">
+      <Orbs />
+      <GiantWord drift={14}>Colecciones</GiantWord>
       <div className="container">
         <div className="section__head">
           <Eyebrow data-reveal>Colecciones</Eyebrow>
@@ -242,6 +266,8 @@ export function Collections() {
 export function Story() {
   return (
     <section className="section story" id="nosotros">
+      <div className="story__bg" aria-hidden="true" data-parallax="0.35"><img src="/assets/web/hero-filtro-azul.jpg" alt="" loading="lazy" /></div>
+      <GiantWord drift={-16} align="right">Calidad</GiantWord>
       <div className="container story__grid">
         <div className="story__text">
           <Eyebrow data-reveal>Quiénes somos</Eyebrow>
@@ -260,8 +286,9 @@ export function Story() {
               </div>
             ))}
           </dl>
-          <div data-reveal data-delay="0.2">
+          <div className="story__cta" data-reveal data-delay="0.2">
             <Button href={links.about} variant="dark">Nuestra historia</Button>
+            <div className="story__ring"><RingText text="ALLISTER EYEWEAR · CALIDAD QUE SE NOTA · ESTILO QUE PERDURA · " size={150} /></div>
           </div>
         </div>
         <div className="story__stack" aria-hidden="true">
@@ -377,11 +404,14 @@ export function Lookbook() {
 
   return (
     <section className="section lookbook" id="lookbook">
-      <div className="container section__head section__head--center">
-        <Eyebrow data-reveal>Lookbook</Eyebrow>
-        <h2 className="h2" data-split>@allistereyewear</h2>
-        <p className="section__sub" data-reveal data-delay="0.2">Así se ven en la calle, en la oficina y en el mar. Sigue bajando.</p>
-      </div>
+      <Orbs />
+      <ImageTrail images={items.map((i) => i.src)} className="lookbook__head">
+        <div className="container section__head section__head--center">
+          <Eyebrow data-reveal>Lookbook</Eyebrow>
+          <h2 className="h2" data-split>@allistereyewear</h2>
+          <p className="section__sub" data-reveal data-delay="0.2">Mueve el mouse. Así se ven en la calle, en la oficina y en el mar.</p>
+        </div>
+      </ImageTrail>
       <div className="hscroll" ref={ref}>
         <div className="hscroll__track">
           {items.map((it, i) => (
@@ -395,6 +425,49 @@ export function Lookbook() {
           </div>
         </div>
         <div className="hscroll__progress" aria-hidden="true"><span /></div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------------
+   Zoom — a photo grows from a framed card to full-bleed while pinned
+   ------------------------------------------------------------------------ */
+export function Zoom() {
+  const ref = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const section = ref.current;
+    if (!section || reduced()) return;
+    const ctx = gsap.context(() => {
+      const media = section.querySelector<HTMLElement>(".zoom__media")!;
+      const img = media.querySelector("img")!;
+      const text = section.querySelector<HTMLElement>(".zoom__text")!;
+      const frame = section.querySelector<HTMLElement>(".zoom__frame")!;
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: section, start: "top top", end: "+=160%", pin: true, scrub: 0.6, anticipatePin: 1 },
+      });
+      tl.fromTo(media, { clipPath: "inset(18% 30% 18% 30% round 2rem)" }, { clipPath: "inset(0% 0% 0% 0% round 0rem)", ease: "power2.inOut", duration: 1 }, 0)
+        .fromTo(img, { scale: 1.3 }, { scale: 1, ease: "none", duration: 1.6 }, 0)
+        .to(frame, { opacity: 0, scale: 1.1, duration: 0.5 }, 0)
+        .fromTo(text, { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.6 }, 0.7);
+    }, section);
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <section ref={ref} className="zoom" aria-label="Hechos para el sol de verdad">
+      <figure className="zoom__media">
+        <img src="/assets/web/banner-hombre-jeep.jpg" alt="Pareja con anteojos de sol Allister caminando junto a un muro de acero" loading="lazy" />
+      </figure>
+      <div className="zoom__frame" aria-hidden="true">
+        <span>Sol · LUXE</span>
+        <span>Polarizado · UV 400</span>
+      </div>
+      <div className="zoom__text">
+        <Eyebrow light>Polarizados</Eyebrow>
+        <h2 className="h2">Hechos para<br /><em>el sol de verdad.</em></h2>
+        <p>Sin reflejos en la ciudad, en el agua ni en el asfalto. Contraste real donde más importa.</p>
+        <Button href={links.luxe} variant="light">Ver anteojos de sol</Button>
       </div>
     </section>
   );
@@ -425,6 +498,7 @@ export function Journal() {
 
   return (
     <section className="section journal" id="blog">
+      <GiantWord drift={12}>Blog</GiantWord>
       <div className="container" ref={containerRef}>
         <div className="section__head">
           <Eyebrow data-reveal>Blog</Eyebrow>

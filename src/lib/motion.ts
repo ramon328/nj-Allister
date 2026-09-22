@@ -151,6 +151,41 @@ export function initScrollEffects(root: HTMLElement) {
       });
     });
 
+    // Horizontal drift for giant background words: scrubbed across the parent section.
+    root.querySelectorAll<HTMLElement>("[data-drift]").forEach((el) => {
+      const amt = Number(el.dataset.drift ?? 20);
+      gsap.fromTo(
+        el,
+        { xPercent: amt },
+        { xPercent: -amt, ease: "none", scrollTrigger: { trigger: el.parentElement ?? el, start: "top bottom", end: "bottom top", scrub: true } },
+      );
+    });
+
+    // Rotation scrub for ring elements.
+    root.querySelectorAll<HTMLElement>("[data-rotate]").forEach((el) => {
+      const deg = Number(el.dataset.rotate ?? 180);
+      gsap.fromTo(
+        el,
+        { rotate: 0 },
+        { rotate: deg, ease: "none", scrollTrigger: { trigger: el.parentElement ?? el, start: "top bottom", end: "bottom top", scrub: true } },
+      );
+    });
+
+    // Ambient orbs: slow organic drift, independent of scroll.
+    root.querySelectorAll<HTMLElement>(".orb").forEach((el, i) => {
+      gsap.to(el, {
+        x: () => gsap.utils.random(-60, 60),
+        y: () => gsap.utils.random(-50, 50),
+        scale: () => gsap.utils.random(0.9, 1.15),
+        duration: () => gsap.utils.random(7, 12),
+        ease: "sine.inOut",
+        repeat: -1,
+        yoyo: true,
+        repeatRefresh: true,
+        delay: i * 0.7,
+      });
+    });
+
     root.querySelectorAll<HTMLElement>("[data-counter]").forEach((el) => {
       const to = Number(el.dataset.counter ?? 0);
       const obj = { v: 0 };

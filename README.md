@@ -41,6 +41,9 @@ Todo lo extraído del sitio original vive en `public/assets/`:
 - Beneficios: iconos se dibujan (DrawSVG).
 - Lookbook: sección fijada con scroll horizontal, skew por velocidad, parallax en cada foto.
 - Footer: queda debajo y se revela al terminar la página; ALLISTER gigante sube letra por letra.
+- Fondo: chips de fotos flotando en el hero con profundidad por mouse, orbes ámbar que derivan, palabras gigantes en outline que se desplazan con el scroll, foto de fondo con parallax en Historia, anillo de texto que rota.
+- Sección Zoom: una foto crece de tarjeta enmarcada a pantalla completa mientras la sección queda fijada.
+- Lookbook: al mover el mouse sobre el título aparecen fotos que se desvanecen (image trail).
 - Cursor custom con etiqueta contextual ("Ver colección", "Leer").
 - Todo respeta `prefers-reduced-motion`.
 

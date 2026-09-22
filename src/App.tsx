@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Cursor, Loader, TopBar } from "./components/Chrome";
-import { Benefits, Collections, Footer, Hero, Journal, Lookbook, Marquee, Newsletter, Story } from "./components/Sections";
+import { Benefits, Collections, Footer, Hero, Journal, Lookbook, Marquee, Newsletter, Story, Zoom } from "./components/Sections";
 import { ScrollTrigger, initLenis, initScrollEffects } from "./lib/motion";
 
 export default function App() {
@@ -44,6 +44,7 @@ export default function App() {
           <Marquee />
           <Collections />
           <Story />
+          <Zoom />
           <Benefits />
           <Lookbook />
           <Journal />
