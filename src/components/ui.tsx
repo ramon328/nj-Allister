@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { useMagnetic } from "../hooks/useMotion";
 
 export const ArrowIcon = () => (
@@ -31,9 +31,11 @@ export function Button({ href, variant, children, className = "", type = "button
   return <button ref={ref} type={type} className={cls}>{inner}</button>;
 }
 
-export function Eyebrow({ children, light = false, className = "" }: { children: ReactNode; light?: boolean; className?: string }) {
+type EyebrowProps = HTMLAttributes<HTMLParagraphElement> & { light?: boolean; children: ReactNode };
+
+export function Eyebrow({ children, light = false, className = "", ...rest }: EyebrowProps) {
   return (
-    <p className={`eyebrow ${light ? "eyebrow--light" : ""} ${className}`.trim()}>
+    <p className={`eyebrow ${light ? "eyebrow--light" : ""} ${className}`.trim()} {...rest}>
       <span className="eyebrow__dot" />{children}
     </p>
   );

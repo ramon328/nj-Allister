@@ -1,22 +1,24 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import {
   articles, collections, links, lookbookRowA, lookbookRowB, marqueeItems, stats,
   type Collection,
 } from "../data";
-import { lerp, useCountUp, useFinePointer, useParallax, useSpotlight } from "../hooks/useMotion";
+import { useFinePointer, useSpotlight } from "../hooks/useMotion";
+import { gsap, ScrollTrigger, SplitText, reduced } from "../lib/motion";
 import { ArrowIcon, Button, Eyebrow, LinkUnderline } from "./ui";
 
 /* ------------------------------------------------------------------------
-   Hero
+   Hero — char reveal, video settle, mouse parallax, scroll "cover" fade
    ------------------------------------------------------------------------ */
 export function Hero({ ready }: { ready: boolean }) {
+  const ref = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  // 1080p on desktop, 720p on small screens to save data.
   const [videoSrc] = useState(() =>
     typeof window !== "undefined" && window.innerWidth >= 900
       ? "/assets/video/allister-hero-1080.mp4"
       : "/assets/video/allister-hero-720.mp4",
   );
+
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -28,8 +30,77 @@ export function Hero({ ready }: { ready: boolean }) {
     return () => io.disconnect();
   }, []);
 
+  // Entrance timeline, waits for the preloader and for fonts (SplitText needs final metrics).
+  useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root || !ready || reduced()) return;
+    let split: SplitText | null = null;
+    let leadSplit: SplitText | null = null;
+    const ctx = gsap.context(() => {});
+    let alive = true;
+
+    document.fonts.ready.then(() => {
+      if (!alive) return;
+      ctx.add(() => {
+        const title = root.querySelector<HTMLElement>(".hero__title")!;
+        const lead = root.querySelector<HTMLElement>(".hero__lead")!;
+        split = new SplitText(title, { type: "chars,words", charsClass: "ch", wordsClass: "wd" });
+        leadSplit = new SplitText(lead, { type: "lines", mask: "lines" });
+
+        const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
+        tl.fromTo(root.querySelector(".hero__video"), { scale: 1.35, filter: "blur(14px)" }, { scale: 1, filter: "blur(0px)", duration: 2.8 }, 0)
+          .from(split.chars, { yPercent: 130, rotateX: -80, opacity: 0, duration: 1.5, stagger: { each: 0.028, from: "start" } }, 0.15)
+          .from(root.querySelector(".hero__eyebrow"), { y: 24, opacity: 0, duration: 1 }, 0.4)
+          .from(leadSplit.lines, { yPercent: 110, duration: 1.2, stagger: 0.08 }, 0.8)
+          .from(root.querySelectorAll(".hero__cta > *"), { y: 34, opacity: 0, duration: 1.1, stagger: 0.1 }, 1.0)
+          .from(root.querySelector(".hero__foot"), { y: 24, opacity: 0, duration: 1 }, 1.2)
+          .from(root.querySelectorAll(".hero__pills li"), { y: 14, opacity: 0, stagger: 0.06, duration: 0.8 }, 1.3);
+
+        // Scroll: content lifts and fades while the next section covers the hero.
+        const page = document.querySelector(".page");
+        if (page) {
+          gsap.to(root.querySelector(".hero__content"), {
+            yPercent: -30, opacity: 0, ease: "none",
+            scrollTrigger: { trigger: page, start: "top bottom", end: "top 30%", scrub: true },
+          });
+          gsap.to(root.querySelector(".hero__media"), {
+            scale: 1.18, filter: "blur(6px) brightness(0.7)", ease: "none",
+            scrollTrigger: { trigger: page, start: "top bottom", end: "top top", scrub: true },
+          });
+          gsap.to(root.querySelector(".hero__foot"), {
+            opacity: 0, ease: "none",
+            scrollTrigger: { trigger: page, start: "top bottom", end: "top 75%", scrub: true },
+          });
+        }
+        ScrollTrigger.refresh();
+      });
+    });
+
+    // Mouse parallax on the headline and media.
+    const content = root.querySelector<HTMLElement>(".hero__content")!;
+    const media = root.querySelector<HTMLElement>(".hero__media")!;
+    const cx = gsap.quickTo(content, "x", { duration: 1.2, ease: "power3" });
+    const cy = gsap.quickTo(content, "y", { duration: 1.2, ease: "power3" });
+    const mx = gsap.quickTo(media, "x", { duration: 1.6, ease: "power3" });
+    const my = gsap.quickTo(media, "y", { duration: 1.6, ease: "power3" });
+    const onMove = (e: PointerEvent) => {
+      const nx = e.clientX / window.innerWidth - 0.5;
+      const ny = e.clientY / window.innerHeight - 0.5;
+      cx(nx * 18); cy(ny * 12); mx(nx * -22); my(ny * -14);
+    };
+    if (window.matchMedia("(hover: hover)").matches) root.addEventListener("pointermove", onMove);
+
+    return () => {
+      alive = false;
+      root.removeEventListener("pointermove", onMove);
+      ctx.revert();
+      split?.revert();
+      leadSplit?.revert();
+    };
+  }, [ready]);
+
   return (
-    <section className={`hero ${ready ? "is-in" : ""}`} id="hero">
+    <section ref={ref} className="hero" id="hero">
       <div className="hero__media">
         <video
           ref={videoRef}
@@ -44,8 +115,8 @@ export function Hero({ ready }: { ready: boolean }) {
       <div className="hero__content">
         <Eyebrow className="hero__eyebrow">Colección LUXE · Envío gratis</Eyebrow>
         <h1 className="hero__title">
-          <span className="line"><span>Mira el mundo</span></span>
-          <span className="line"><span><em>sin reflejos.</em></span></span>
+          <span className="line">Mira el mundo</span>
+          <span className="line"><em>sin reflejos.</em></span>
         </h1>
         <p className="hero__lead">
           Anteojos de sol polarizados con protección UV400, ópticos con filtro azul y lectura magnéticos. Diseñados en Chile para el día a día.
@@ -66,13 +137,31 @@ export function Hero({ ready }: { ready: boolean }) {
 }
 
 /* ------------------------------------------------------------------------
-   Marquee
+   Marquee — speed and direction react to scroll velocity, with a skew
    ------------------------------------------------------------------------ */
 export function Marquee() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const track = ref.current;
+    if (!track || reduced()) return;
+    const tween = gsap.to(track, { xPercent: -50, ease: "none", duration: 26, repeat: -1 });
+    const skew = gsap.quickTo(track, "skewX", { duration: 0.5, ease: "power3" });
+    let dir = 1;
+    const st = ScrollTrigger.create({
+      onUpdate: (self) => {
+        const v = self.getVelocity();
+        dir = v < 0 ? -1 : 1;
+        const boost = gsap.utils.clamp(1, 7, 1 + Math.abs(v) / 350);
+        gsap.to(tween, { timeScale: dir * boost, duration: 0.4, overwrite: true, onComplete: () => gsap.to(tween, { timeScale: dir, duration: 1.4, ease: "power2.out" }) });
+        skew(gsap.utils.clamp(-14, 14, -v / 90));
+      },
+    });
+    return () => { tween.kill(); st.kill(); };
+  }, []);
   const items = [...marqueeItems, ...marqueeItems];
   return (
     <div className="marquee" aria-hidden="true">
-      <div className="marquee__track">
+      <div className="marquee__track" ref={ref}>
         {items.map((t, i) => (<span key={i}>{t}<i>◆</i></span>))}
       </div>
     </div>
@@ -80,14 +169,44 @@ export function Marquee() {
 }
 
 /* ------------------------------------------------------------------------
-   Collections bento
+   Collections bento — clip reveal, 3D tilt, spotlight, inner parallax
    ------------------------------------------------------------------------ */
 function CollectionCard({ c, index }: { c: Collection; index: number }) {
-  const ref = useSpotlight<HTMLAnchorElement>();
+  const spot = useSpotlight<HTMLAnchorElement>();
+  const fine = useFinePointer();
+
+  useEffect(() => {
+    const card = spot.current;
+    if (!card || !fine || reduced()) return;
+    const rx = gsap.quickTo(card, "rotateX", { duration: 0.7, ease: "power3" });
+    const ry = gsap.quickTo(card, "rotateY", { duration: 0.7, ease: "power3" });
+    const ty = gsap.quickTo(card, "y", { duration: 0.7, ease: "power3" });
+    const glare = card.querySelector<HTMLElement>(".card__glare");
+    const gx = glare ? gsap.quickTo(glare, "xPercent", { duration: 0.7, ease: "power3" }) : null;
+    const onMove = (e: PointerEvent) => {
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      rx(py * -7); ry(px * 9); ty(-8); gx?.(px * 60);
+    };
+    const onLeave = () => { rx(0); ry(0); ty(0); gx?.(0); };
+    card.addEventListener("pointermove", onMove);
+    card.addEventListener("pointerleave", onLeave);
+    return () => { card.removeEventListener("pointermove", onMove); card.removeEventListener("pointerleave", onLeave); };
+  }, [spot, fine]);
+
   return (
-    <a ref={ref} href={c.href} className={`card card--${c.id} reveal spotlight`} style={{ "--d": index } as React.CSSProperties}>
+    <a
+      ref={spot}
+      href={c.href}
+      className={`card card--${c.id} spotlight`}
+      data-clip
+      data-delay={index * 0.08}
+      data-cursor="Ver colección"
+    >
       <div className="card__shell">
-        <figure className="card__media"><img src={c.img} alt={c.alt} loading="lazy" /></figure>
+        <figure className="card__media" data-scale><img src={c.img} alt={c.alt} loading="lazy" /></figure>
+        <span className="card__glare" aria-hidden="true" />
         <span className={`badge ${c.badgeAccent ? "badge--accent" : ""}`}>{c.badge}</span>
         <div className="card__body">
           <p className="card__kicker">{c.kicker}</p>
@@ -104,10 +223,10 @@ export function Collections() {
   return (
     <section className="section collections" id="colecciones">
       <div className="container">
-        <div className="section__head reveal">
-          <Eyebrow>Colecciones</Eyebrow>
-          <h2 className="h2">Cinco formas de<br /><em>ver mejor.</em></h2>
-          <LinkUnderline href={links.all}>Ver todo el catálogo</LinkUnderline>
+        <div className="section__head">
+          <Eyebrow data-reveal>Colecciones</Eyebrow>
+          <h2 className="h2" data-split>Cinco formas de<br /><em>ver mejor.</em></h2>
+          <span data-reveal data-delay="0.3"><LinkUnderline href={links.all}>Ver todo el catálogo</LinkUnderline></span>
         </div>
         <div className="bento">
           {collections.map((c, i) => <CollectionCard key={c.id} c={c} index={i} />)}
@@ -118,44 +237,43 @@ export function Collections() {
 }
 
 /* ------------------------------------------------------------------------
-   Story
+   Story — split lines, counters, cascading images with parallax + wipe
    ------------------------------------------------------------------------ */
-function Stat({ to, prefix, suffix, label, delay }: { to: number; prefix: string; suffix: string; label: string; delay: number }) {
-  const ref = useCountUp(to);
-  return (
-    <div className="reveal" style={{ "--d": delay } as React.CSSProperties}>
-      <dt>{prefix}<span ref={ref}>0</span>{suffix}</dt>
-      <dd>{label}</dd>
-    </div>
-  );
-}
-
 export function Story() {
-  const ref = useRef<HTMLElement>(null);
-  useParallax(ref);
   return (
-    <section ref={ref} className="section story" id="nosotros">
+    <section className="section story" id="nosotros">
       <div className="container story__grid">
         <div className="story__text">
-          <Eyebrow className="reveal">Quiénes somos</Eyebrow>
-          <h2 className="h2 reveal" style={{ "--d": 1 } as React.CSSProperties}>Calidad que se nota.<br /><em>Estilo que perdura.</em></h2>
-          <p className="story__p reveal" style={{ "--d": 2 } as React.CSSProperties}>
+          <Eyebrow data-reveal>Quiénes somos</Eyebrow>
+          <h2 className="h2" data-split>Calidad que se nota.<br /><em>Estilo que perdura.</em></h2>
+          <p className="story__p" data-split data-delay="0.1">
             Allister Eyewear® nació con una misión clara: llevar anteojos de calidad a quienes valoran el estilo, el cuidado visual y los detalles que marcan la diferencia.
           </p>
-          <p className="story__p reveal" style={{ "--d": 3 } as React.CSSProperties}>
+          <p className="story__p" data-split data-delay="0.2">
             Desde anteojos de sol con protección UV real hasta lentes de uso diario, cada pieza usa materiales de alta calidad, lentes cuidadosamente seleccionados y diseños atemporales que trascienden las tendencias. Protegerse del sol o de las pantallas no debería ser un sacrificio estético.
           </p>
-          <dl className="stats">
-            {stats.map((s, i) => <Stat key={s.label} {...s} delay={4 + i} />)}
+          <dl className="stats" data-reveal-group>
+            {stats.map((s) => (
+              <div key={s.label}>
+                <dt>{s.prefix}<span data-counter={s.to}>0</span>{s.suffix}</dt>
+                <dd>{s.label}</dd>
+              </div>
+            ))}
           </dl>
-          <div className="reveal" style={{ "--d": 8 } as React.CSSProperties}>
+          <div data-reveal data-delay="0.2">
             <Button href={links.about} variant="dark">Nuestra historia</Button>
           </div>
         </div>
         <div className="story__stack" aria-hidden="true">
-          <figure className="stack__item stack__item--1" data-speed="0.12"><img src="/assets/web/banner-mujer-rubia-terraza.jpg" alt="" loading="lazy" /></figure>
-          <figure className="stack__item stack__item--2" data-speed="-0.08"><img src="/assets/web/banner-hombre-jeep.jpg" alt="" loading="lazy" /></figure>
-          <figure className="stack__item stack__item--3" data-speed="0.2"><img src="/assets/web/banner-luxe-ryder-mujer.jpg" alt="" loading="lazy" /></figure>
+          <div className="stack__item stack__item--1" data-parallax="0.18">
+            <figure data-clip="up"><img src="/assets/web/banner-mujer-rubia-terraza.jpg" alt="" loading="lazy" /></figure>
+          </div>
+          <div className="stack__item stack__item--2" data-parallax="-0.12">
+            <figure data-clip="up" data-delay="0.15"><img src="/assets/web/banner-hombre-jeep.jpg" alt="" loading="lazy" /></figure>
+          </div>
+          <div className="stack__item stack__item--3" data-parallax="0.3">
+            <figure data-clip="up" data-delay="0.3"><img src="/assets/web/banner-luxe-ryder-mujer.jpg" alt="" loading="lazy" /></figure>
+          </div>
         </div>
       </div>
     </section>
@@ -163,11 +281,11 @@ export function Story() {
 }
 
 /* ------------------------------------------------------------------------
-   Benefits
+   Benefits — icons draw themselves
    ------------------------------------------------------------------------ */
 const benefitIcons = {
   polarized: (
-    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12c0-2 1.5-3 3.5-3h5c2 0 3 1.5 3.5 3M28 12c0-2-1.5-3-3.5-3h-5c-2 0-3 1.5-3.5 3M4 12v6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4v-6M28 12v6a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4v-6" /><path d="M6 15h8M18 15h8" strokeDasharray="1.5 2" /></svg>
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12c0-2 1.5-3 3.5-3h5c2 0 3 1.5 3.5 3M28 12c0-2-1.5-3-3.5-3h-5c-2 0-3 1.5-3.5 3M4 12v6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4v-6M28 12v6a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4v-6" /><path d="M6 15h8M18 15h8" /></svg>
   ),
   uv: (
     <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"><circle cx="16" cy="16" r="5" /><path d="M16 3v4M16 25v4M3 16h4M25 16h4M6.8 6.8l2.8 2.8M22.4 22.4l2.8 2.8M6.8 25.2l2.8-2.8M22.4 9.6l2.8-2.8" /></svg>
@@ -195,10 +313,10 @@ export function Benefits() {
   return (
     <section className="section benefits">
       <div className="container">
-        <ul className="benefits__list">
+        <ul className="benefits__list" data-reveal-group>
           {benefits.map((b, i) => (
-            <li key={b.title} className="reveal" style={{ "--d": i } as React.CSSProperties}>
-              {b.icon}
+            <li key={b.title}>
+              <span className="benefits__icon" data-draw data-delay={0.2 + i * 0.1}>{b.icon}</span>
               <h3>{b.title}</h3>
               <p>{b.text}</p>
             </li>
@@ -210,81 +328,113 @@ export function Benefits() {
 }
 
 /* ------------------------------------------------------------------------
-   Lookbook filmstrips
+   Lookbook — pinned horizontal scroll with velocity skew and inner parallax
    ------------------------------------------------------------------------ */
-function Filmstrip({ items, dir }: { items: { src: string; alt: string }[]; dir: "left" | "right" }) {
-  return (
-    <div className="filmstrip" data-dir={dir}>
-      <div className="filmstrip__track">
-        {[...items, ...items].map((it, i) => (
-          <figure key={i}>
-            <img src={it.src} alt={i < items.length ? it.alt : ""} aria-hidden={i >= items.length} loading="lazy" />
-          </figure>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function Lookbook() {
+  const ref = useRef<HTMLDivElement>(null);
+  const items = [...lookbookRowA, ...lookbookRowB];
+
+  useLayoutEffect(() => {
+    const wrap = ref.current;
+    if (!wrap || reduced()) return;
+    const track = wrap.querySelector<HTMLElement>(".hscroll__track")!;
+    const bar = wrap.querySelector<HTMLElement>(".hscroll__progress span")!;
+    const figures = Array.from(track.querySelectorAll<HTMLElement>("figure"));
+    const ctx = gsap.context(() => {
+      const dist = () => track.scrollWidth - window.innerWidth;
+      const skew = gsap.quickTo(track, "skewX", { duration: 0.6, ease: "power3" });
+      const scroll = gsap.to(track, {
+        x: () => -dist(),
+        ease: "none",
+        scrollTrigger: {
+          trigger: wrap,
+          start: "top top",
+          end: () => `+=${dist()}`,
+          pin: true,
+          scrub: 0.8,
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
+          onUpdate: (self) => {
+            gsap.set(bar, { scaleX: self.progress });
+            skew(gsap.utils.clamp(-8, 8, -self.getVelocity() / 260));
+          },
+        },
+      });
+      figures.forEach((fig, i) => {
+        const img = fig.querySelector("img");
+        gsap.fromTo(img, { xPercent: -10 }, {
+          xPercent: 10, ease: "none",
+          scrollTrigger: { trigger: fig, containerAnimation: scroll, start: "left right", end: "right left", scrub: true },
+        });
+        gsap.from(fig, {
+          yPercent: i % 2 ? 18 : -18, rotate: i % 2 ? 4 : -4, opacity: 0, duration: 1.2,
+          scrollTrigger: { trigger: fig, containerAnimation: scroll, start: "left 95%", once: true },
+        });
+      });
+    }, wrap);
+    return () => ctx.revert();
+  }, []);
+
   return (
     <section className="section lookbook" id="lookbook">
-      <div className="container section__head section__head--center reveal">
-        <Eyebrow>Lookbook</Eyebrow>
-        <h2 className="h2">@allistereyewear</h2>
-        <p className="section__sub">Así se ven en la calle, en la oficina y en el mar.</p>
+      <div className="container section__head section__head--center">
+        <Eyebrow data-reveal>Lookbook</Eyebrow>
+        <h2 className="h2" data-split>@allistereyewear</h2>
+        <p className="section__sub" data-reveal data-delay="0.2">Así se ven en la calle, en la oficina y en el mar. Sigue bajando.</p>
       </div>
-      <Filmstrip items={lookbookRowA} dir="left" />
-      <Filmstrip items={lookbookRowB} dir="right" />
-      <div className="container lookbook__cta reveal">
-        <Button href={links.instagram} variant="dark">Seguir en Instagram</Button>
-        <LinkUnderline href={links.lookbook}>Ver lookbook completo</LinkUnderline>
+      <div className="hscroll" ref={ref}>
+        <div className="hscroll__track">
+          {items.map((it, i) => (
+            <figure key={it.src} className={i % 3 === 1 ? "is-tall" : ""} data-cursor="Ver">
+              <img src={it.src} alt={it.alt} loading="lazy" />
+            </figure>
+          ))}
+          <div className="hscroll__end">
+            <p className="h2">Más en<br /><em>Instagram.</em></p>
+            <Button href={links.instagram} variant="dark">Seguir @allistereyewear</Button>
+          </div>
+        </div>
+        <div className="hscroll__progress" aria-hidden="true"><span /></div>
       </div>
     </section>
   );
 }
 
 /* ------------------------------------------------------------------------
-   Journal — list with floating preview image
+   Journal — list rows with a floating preview that follows the cursor
    ------------------------------------------------------------------------ */
 export function Journal() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLOListElement>(null);
   const floatRef = useRef<HTMLDivElement>(null);
   const [img, setImg] = useState(articles[0].img);
   const [on, setOn] = useState(false);
   const fine = useFinePointer();
 
   useEffect(() => {
-    const list = listRef.current, box = floatRef.current, container = containerRef.current;
-    if (!list || !box || !container || !fine) return;
-    let tx = 0, ty = 0, cx = 0, cy = 0, raf: number | null = null;
-    const render = () => {
-      cx = lerp(cx, tx, 0.14); cy = lerp(cy, ty, 0.14);
-      box.style.left = `${cx}px`; box.style.top = `${cy}px`;
-      raf = Math.abs(cx - tx) > 0.2 || Math.abs(cy - ty) > 0.2 ? requestAnimationFrame(render) : null;
-    };
+    const box = floatRef.current, container = containerRef.current;
+    if (!box || !container || !fine || reduced()) return;
+    const fx = gsap.quickTo(box, "x", { duration: 0.9, ease: "power3" });
+    const fy = gsap.quickTo(box, "y", { duration: 0.9, ease: "power3" });
     const onMove = (e: PointerEvent) => {
       const r = container.getBoundingClientRect();
-      tx = e.clientX - r.left; ty = e.clientY - r.top;
-      if (raf === null) raf = requestAnimationFrame(render);
+      fx(e.clientX - r.left); fy(e.clientY - r.top);
     };
-    list.addEventListener("pointermove", onMove);
-    return () => { list.removeEventListener("pointermove", onMove); if (raf !== null) cancelAnimationFrame(raf); };
+    container.addEventListener("pointermove", onMove);
+    return () => container.removeEventListener("pointermove", onMove);
   }, [fine]);
 
   return (
     <section className="section journal" id="blog">
       <div className="container" ref={containerRef}>
-        <div className="section__head reveal">
-          <Eyebrow>Blog</Eyebrow>
-          <h2 className="h2">Lo que nadie<br /><em>te dice.</em></h2>
-          <LinkUnderline href={links.blog}>Todos los artículos</LinkUnderline>
+        <div className="section__head">
+          <Eyebrow data-reveal>Blog</Eyebrow>
+          <h2 className="h2" data-split>Lo que nadie<br /><em>te dice.</em></h2>
+          <span data-reveal data-delay="0.3"><LinkUnderline href={links.blog}>Todos los artículos</LinkUnderline></span>
         </div>
-        <ol className="journal__list" ref={listRef} onPointerLeave={() => setOn(false)}>
+        <ol className="journal__list" data-reveal-group onPointerLeave={() => setOn(false)}>
           {articles.map((a, i) => (
-            <li key={a.href} className="reveal" style={{ "--d": i } as React.CSSProperties}>
-              <a href={a.href} onPointerEnter={() => { setImg(a.img); setOn(true); }}>
+            <li key={a.href}>
+              <a href={a.href} data-cursor="Leer" onPointerEnter={() => { setImg(a.img); setOn(true); }}>
                 <span className="journal__num">{String(i + 1).padStart(2, "0")}</span>
                 <span className="journal__meta"><time dateTime={a.date}>{a.dateLabel}</time><em>{a.category}</em></span>
                 <span className="journal__title">{a.title}</span>
@@ -335,15 +485,15 @@ export function Newsletter() {
   return (
     <section className="section newsletter" id="newsletter">
       <div className="container">
-        <div className="newsletter__shell reveal">
+        <div className="newsletter__shell" data-clip>
           <div className="newsletter__core">
-            <div className="newsletter__bg" aria-hidden="true"><img src="/assets/web/hero-sol-sin-reflejos.jpg" alt="" loading="lazy" /></div>
+            <div className="newsletter__bg" aria-hidden="true" data-scale><img src="/assets/web/hero-sol-sin-reflejos.jpg" alt="" loading="lazy" /></div>
             <div className="newsletter__text">
-              <Eyebrow light>Primera compra</Eyebrow>
-              <h2 className="h2">10% de descuento<br /><em>con el código HOLA10.</em></h2>
-              <p>Déjanos tu correo y recibe novedades, lanzamientos y promociones antes que nadie.</p>
+              <Eyebrow light data-reveal>Primera compra</Eyebrow>
+              <h2 className="h2" data-split data-delay="0.1">10% de descuento<br /><em>con el código HOLA10.</em></h2>
+              <p data-reveal data-delay="0.3">Déjanos tu correo y recibe novedades, lanzamientos y promociones antes que nadie.</p>
             </div>
-            <form className="newsletter__form" onSubmit={onSubmit} noValidate>
+            <form className="newsletter__form" onSubmit={onSubmit} noValidate data-reveal data-delay="0.4">
               <label htmlFor="email" className="sr-only">Correo electrónico</label>
               <div className={`field ${error && !valid(email.trim()) ? "is-invalid" : ""}`}>
                 <input
@@ -372,11 +522,34 @@ export function Newsletter() {
 }
 
 /* ------------------------------------------------------------------------
-   Footer
+   Footer — revealed from under the page; giant wordmark rises letter by letter
    ------------------------------------------------------------------------ */
 export function Footer() {
+  const ref = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const footer = ref.current;
+    if (!footer || reduced()) return;
+    let split: SplitText | null = null;
+    const ctx = gsap.context(() => {
+      const page = document.querySelector(".page");
+      if (!page) return;
+      const giant = footer.querySelector<HTMLElement>(".footer__giant")!;
+      split = new SplitText(giant, { type: "chars" });
+      gsap.from(split.chars, {
+        yPercent: 100, opacity: 0, stagger: 0.04, ease: "none",
+        scrollTrigger: { trigger: page, start: "bottom 90%", end: "bottom 35%", scrub: true },
+      });
+      gsap.from(footer.querySelector(".footer__top"), {
+        y: 80, opacity: 0, ease: "none",
+        scrollTrigger: { trigger: page, start: "bottom 95%", end: "bottom 45%", scrub: true },
+      });
+    }, footer);
+    return () => { ctx.revert(); split?.revert(); };
+  }, []);
+
   return (
-    <footer className="footer" id="contacto">
+    <footer ref={ref} className="footer" id="contacto">
       <div className="container">
         <div className="footer__top">
           <div className="footer__brand">
