@@ -758,7 +758,7 @@ svg { display: block; }
   .nav__links { display: none; }
   .nav__burger { display: block; }
   .nav__pill { grid-template-columns: auto 1fr auto; }
-  .menu__inner { grid-template-columns: 1fr; padding-top: 6rem; }
+  .menu__inner { grid-template-columns: 1fr; padding-top: 8.5rem; }
   .menu__aside { align-self: start; }
   .story__grid { grid-template-columns: 1fr; }
   .story__stack { max-width: 520px; margin-inline: auto; width: 100%; }
