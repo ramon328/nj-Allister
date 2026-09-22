@@ -11,6 +11,12 @@ import { ArrowIcon, Button, Eyebrow, LinkUnderline } from "./ui";
    ------------------------------------------------------------------------ */
 export function Hero({ ready }: { ready: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  // 1080p on desktop, 720p on small screens to save data.
+  const [videoSrc] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth >= 900
+      ? "/assets/video/allister-hero-1080.mp4"
+      : "/assets/video/allister-hero-720.mp4",
+  );
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -32,7 +38,7 @@ export function Hero({ ready }: { ready: boolean }) {
           poster="/assets/web/video-poster.jpg"
           preload="metadata"
         >
-          <source src="/assets/video/allister-hero-720.mp4" type="video/mp4" />
+          <source src={videoSrc} type="video/mp4" />
         </video>
       </div>
       <div className="hero__content">

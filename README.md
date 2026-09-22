@@ -27,8 +27,8 @@ Todo lo extraído del sitio original vive en `public/assets/`:
 
 - `img/hero`, `img/banners`, `img/instagram`, `img/blog`, `img/collections`, `img/brand` — originales en alta resolución.
 - `img/products` — fotos de producto (35 modelos, 2 vistas c/u) y `products.json` con títulos, precios y URLs. **No se publican en la página**, quedan guardadas para uso futuro.
-- `video/allister-hero.mp4` (original 1080p) y `allister-hero-720.mp4` (versión web, 1.6 MB, sin audio).
-- `web/` — copias optimizadas (jpg ≤1800px) que usa la página, más el logo recortado con fondo transparente.
+- `video/allister-hero.mp4` (original, 14 MB), `allister-hero-1080.mp4` (desktop, 6.5 MB) y `allister-hero-720.mp4` (móvil, 1.6 MB), ambos sin audio.
+- `web/` — copias que usa la página: JPEG calidad 92 sin submuestreo de croma, hasta 2560px de ancho (los originales de 1000px se sirven a resolución nativa), más el logo recortado con fondo transparente.
 
 ## Pendientes para producción
 
