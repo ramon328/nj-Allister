@@ -8,8 +8,16 @@ import { gsap, ScrollTrigger, SplitText, reduced } from "../lib/motion";
 import { ArrowIcon, Button, Eyebrow, LinkUnderline } from "./ui";
 import { GiantWord, ImageTrail, Orbs, RingText } from "./Decor";
 
+const heroSlides = [
+  { src: "/assets/web/hero-sol-sin-reflejos.jpg", pos: "60% 40%" },
+  { src: "/assets/web/hero-generacion-a.jpg", pos: "50% 35%" },
+  { src: "/assets/web/banner-mujer-rubia-terraza.jpg", pos: "60% 40%" },
+  { src: "/assets/web/hero-filtro-azul.jpg", pos: "50% 40%" },
+  { src: "/assets/web/banner-luxe-ryder-mujer.jpg", pos: "60% 30%" },
+];
+
 /* ------------------------------------------------------------------------
-   Hero — char reveal, video settle, mouse parallax, scroll "cover" fade
+   Hero — char reveal, circle-reveal slideshow, mouse parallax, scroll "cover"
    ------------------------------------------------------------------------ */
 export function Hero({ ready }: { ready: boolean }) {
   const ref = useRef<HTMLElement>(null);
@@ -30,6 +38,41 @@ export function Hero({ ready }: { ready: boolean }) {
     io.observe(v);
     return () => io.disconnect();
   }, []);
+
+  // Slideshow: each new slide opens as a circle from a random point over the previous one.
+  useEffect(() => {
+    const root = ref.current;
+    if (!root || !ready || reduced()) return;
+    const slides = Array.from(root.querySelectorAll<HTMLElement>(".hero__slide"));
+    const counter = root.querySelector<HTMLElement>(".hero__counter span");
+    if (slides.length < 2) return;
+    let current = 0;
+    let timer = 0;
+    let tween: gsap.core.Timeline | null = null;
+    const show = (next: number) => {
+      const from = slides[current], to = slides[next];
+      const ox = gsap.utils.random(25, 75), oy = gsap.utils.random(30, 70);
+      const img = to.querySelector("img, video");
+      tween?.kill();
+      gsap.set(to, { zIndex: 2, clipPath: `circle(0% at ${ox}% ${oy}%)`, visibility: "visible" });
+      tween = gsap.timeline({
+        onComplete: () => {
+          gsap.set(from, { visibility: "hidden", zIndex: 0 });
+          gsap.set(to, { zIndex: 1, clipPath: "none" });
+          current = next;
+        },
+      });
+      tween.to(to, { clipPath: `circle(142% at ${ox}% ${oy}%)`, duration: 1.8, ease: "expo.inOut" }, 0)
+        .fromTo(img, { scale: 1.3 }, { scale: 1, duration: 2.4, ease: "expo.out" }, 0)
+        .to(from.querySelector("img, video"), { scale: 1.12, duration: 1.8, ease: "power2.inOut" }, 0);
+      if (counter) counter.textContent = String(next + 1).padStart(2, "0");
+    };
+    const loop = () => {
+      timer = window.setTimeout(() => { show((current + 1) % slides.length); loop(); }, current === 0 ? 7000 : 4800);
+    };
+    loop();
+    return () => { clearTimeout(timer); tween?.kill(); };
+  }, [ready]);
 
   // Entrance timeline, waits for the preloader and for fonts (SplitText needs final metrics).
   useLayoutEffect(() => {
@@ -56,15 +99,7 @@ export function Hero({ ready }: { ready: boolean }) {
           .from(root.querySelectorAll(".hero__cta > *"), { y: 34, opacity: 0, duration: 1.1, stagger: 0.1 }, 1.0)
           .from(root.querySelector(".hero__foot"), { y: 24, opacity: 0, duration: 1 }, 1.2)
           .from(root.querySelectorAll(".hero__pills li"), { y: 14, opacity: 0, stagger: 0.06, duration: 0.8 }, 1.3)
-          .from(root.querySelectorAll(".chip"), { scale: 0, rotate: () => gsap.utils.random(-40, 40), opacity: 0, duration: 1.6, stagger: 0.12, ease: "expo.out" }, 0.9);
-
-        // Chips float gently, each on its own rhythm.
-        root.querySelectorAll<HTMLElement>(".chip").forEach((chip, i) => {
-          gsap.to(chip.firstElementChild, {
-            y: () => gsap.utils.random(-14, 14), rotate: () => gsap.utils.random(-5, 5),
-            duration: () => gsap.utils.random(3.5, 5.5), ease: "sine.inOut", repeat: -1, yoyo: true, repeatRefresh: true, delay: i * 0.4,
-          });
-        });
+          .from(root.querySelector(".hero__counter"), { y: 14, opacity: 0, duration: 0.8 }, 1.4);
 
         // Scroll: content lifts and fades while the next section covers the hero.
         const page = document.querySelector(".page");
@@ -93,16 +128,10 @@ export function Hero({ ready }: { ready: boolean }) {
     const cy = gsap.quickTo(content, "y", { duration: 1.2, ease: "power3" });
     const mx = gsap.quickTo(media, "x", { duration: 1.6, ease: "power3" });
     const my = gsap.quickTo(media, "y", { duration: 1.6, ease: "power3" });
-    const chips = Array.from(root.querySelectorAll<HTMLElement>(".chip")).map((el) => ({
-      depth: Number(el.dataset.depth ?? 1),
-      x: gsap.quickTo(el, "x", { duration: 1.4, ease: "power3" }),
-      y: gsap.quickTo(el, "y", { duration: 1.4, ease: "power3" }),
-    }));
     const onMove = (e: PointerEvent) => {
       const nx = e.clientX / window.innerWidth - 0.5;
       const ny = e.clientY / window.innerHeight - 0.5;
       cx(nx * 18); cy(ny * 12); mx(nx * -22); my(ny * -14);
-      chips.forEach((c) => { c.x(nx * -60 * c.depth); c.y(ny * -40 * c.depth); });
     };
     if (window.matchMedia("(hover: hover)").matches) root.addEventListener("pointermove", onMove);
 
@@ -118,21 +147,22 @@ export function Hero({ ready }: { ready: boolean }) {
   return (
     <section ref={ref} className="hero" id="hero">
       <div className="hero__media">
-        <video
-          ref={videoRef}
-          className="hero__video"
-          autoPlay muted loop playsInline
-          poster="/assets/web/video-poster.jpg"
-          preload="metadata"
-        >
-          <source src={videoSrc} type="video/mp4" />
-        </video>
-      </div>
-      <div className="hero__chips" aria-hidden="true">
-        <div className="chip chip--1" data-depth="1.4"><figure><img src="/assets/web/ig-03.jpg" alt="" /></figure></div>
-        <div className="chip chip--2" data-depth="0.8"><figure><img src="/assets/web/ig-11.jpg" alt="" /></figure></div>
-        <div className="chip chip--3" data-depth="1.1"><figure><img src="/assets/web/ig-12.jpg" alt="" /></figure></div>
-        <div className="chip chip--4" data-depth="0.6"><figure><img src="/assets/web/ig-05.jpg" alt="" /></figure></div>
+        <div className="hero__slide is-active">
+          <video
+            ref={videoRef}
+            className="hero__video"
+            autoPlay muted loop playsInline
+            poster="/assets/web/video-poster.jpg"
+            preload="metadata"
+          >
+            <source src={videoSrc} type="video/mp4" />
+          </video>
+        </div>
+        {heroSlides.map((sl) => (
+          <div key={sl.src} className="hero__slide">
+            <img src={sl.src} alt="" style={{ objectPosition: sl.pos }} />
+          </div>
+        ))}
       </div>
       <div className="hero__content">
         <Eyebrow className="hero__eyebrow">Colección LUXE · Envío gratis</Eyebrow>
@@ -153,6 +183,7 @@ export function Hero({ ready }: { ready: boolean }) {
         <ul className="hero__pills" aria-label="Garantías">
           <li>Polarizados</li><li>UV 400</li><li>3 años de garantía</li>
         </ul>
+        <p className="hero__counter" aria-hidden="true"><span>01</span> / {String(heroSlides.length + 1).padStart(2, "0")}</p>
       </div>
     </section>
   );
@@ -293,13 +324,13 @@ export function Story() {
         </div>
         <div className="story__stack" aria-hidden="true">
           <div className="stack__item stack__item--1" data-parallax="0.18">
-            <figure data-clip="up"><img src="/assets/web/banner-mujer-rubia-terraza.jpg" alt="" loading="lazy" /></figure>
+            <figure data-clip="circle"><img src="/assets/web/banner-mujer-rubia-terraza.jpg" alt="" loading="lazy" /></figure>
           </div>
           <div className="stack__item stack__item--2" data-parallax="-0.12">
-            <figure data-clip="up" data-delay="0.15"><img src="/assets/web/banner-hombre-jeep.jpg" alt="" loading="lazy" /></figure>
+            <figure data-clip="circle" data-delay="0.15"><img src="/assets/web/banner-hombre-jeep.jpg" alt="" loading="lazy" /></figure>
           </div>
           <div className="stack__item stack__item--3" data-parallax="0.3">
-            <figure data-clip="up" data-delay="0.3"><img src="/assets/web/banner-luxe-ryder-mujer.jpg" alt="" loading="lazy" /></figure>
+            <figure data-clip="circle" data-delay="0.3"><img src="/assets/web/banner-luxe-ryder-mujer.jpg" alt="" loading="lazy" /></figure>
           </div>
         </div>
       </div>
@@ -446,7 +477,7 @@ export function Zoom() {
       const tl = gsap.timeline({
         scrollTrigger: { trigger: section, start: "top top", end: "+=160%", pin: true, scrub: 0.6, anticipatePin: 1 },
       });
-      tl.fromTo(media, { clipPath: "inset(18% 30% 18% 30% round 2rem)" }, { clipPath: "inset(0% 0% 0% 0% round 0rem)", ease: "power2.inOut", duration: 1 }, 0)
+      tl.fromTo(media, { clipPath: "circle(14% at 50% 50%)" }, { clipPath: "circle(80% at 50% 50%)", ease: "power2.inOut", duration: 1 }, 0)
         .fromTo(img, { scale: 1.3 }, { scale: 1, ease: "none", duration: 1.6 }, 0)
         .to(frame, { opacity: 0, scale: 1.1, duration: 0.5 }, 0)
         .fromTo(text, { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.6 }, 0.7);
@@ -459,10 +490,7 @@ export function Zoom() {
       <figure className="zoom__media">
         <img src="/assets/web/banner-hombre-jeep.jpg" alt="Pareja con anteojos de sol Allister caminando junto a un muro de acero" loading="lazy" />
       </figure>
-      <div className="zoom__frame" aria-hidden="true">
-        <span>Sol · LUXE</span>
-        <span>Polarizado · UV 400</span>
-      </div>
+      <div className="zoom__frame" aria-hidden="true"><span /></div>
       <div className="zoom__text">
         <Eyebrow light>Polarizados</Eyebrow>
         <h2 className="h2">Hechos para<br /><em>el sol de verdad.</em></h2>

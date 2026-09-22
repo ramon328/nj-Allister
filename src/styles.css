@@ -327,12 +327,14 @@ svg { display: block; }
   color: var(--cream); overflow: hidden; isolation: isolate;
   perspective: 1200px;
 }
-.hero__media { position: absolute; inset: -4%; z-index: -1; will-change: transform; }
-.hero__video { width: 100%; height: 100%; object-fit: cover; }
+.hero__media { position: absolute; inset: -4%; z-index: -1; will-change: transform; background: var(--ink); }
+.hero__slide { position: absolute; inset: 0; visibility: hidden; will-change: clip-path; overflow: hidden; }
+.hero__slide.is-active { visibility: visible; z-index: 1; }
+.hero__slide img, .hero__video { width: 100%; height: 100%; object-fit: cover; will-change: transform; }
 .hero__media::after {
   content: ""; position: absolute; inset: 0;
   background:
-    linear-gradient(180deg, rgba(21, 19, 17, 0.55) 0%, rgba(21, 19, 17, 0.15) 35%, rgba(21, 19, 17, 0.78) 100%),
+    linear-gradient(180deg, rgba(21, 19, 17, 0.6) 0%, rgba(21, 19, 17, 0.28) 35%, rgba(21, 19, 17, 0.82) 100%),
     radial-gradient(60% 60% at 80% 40%, rgba(184, 135, 74, 0.18), transparent 70%);
 }
 .hero__content {
@@ -363,6 +365,8 @@ svg { display: block; }
 .hero__scroll span::after { content: ""; position: absolute; inset: 0; background: var(--cream); transform: translateX(-100%); animation: scroll-line 2s var(--ease-expo) infinite; }
 @keyframes scroll-line { 50% { transform: translateX(0); } 100% { transform: translateX(100%); } }
 .hero__pills { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.hero__counter { font-family: var(--font-display); font-size: 0.9rem; letter-spacing: 0.1em; color: rgba(244, 239, 231, 0.5); font-variant-numeric: tabular-nums; }
+.hero__counter span { color: var(--cream); }
 .hero__pills li { padding: 0.35rem 0.8rem; border-radius: 999px; border: 1px solid rgba(244, 239, 231, 0.22); }
 
 /* The page that covers the hero and later reveals the footer */
@@ -737,7 +741,7 @@ svg { display: block; }
 }
 
 /* --------------------------------------------------------------------------
-   Background decor: orbs, giant words, ring, hero chips, image trail, zoom
+   Background decor: orbs, giant words, ring, image trail, zoom
    -------------------------------------------------------------------------- */
 
 .collections, .story, .lookbook, .journal { position: relative; overflow: clip; }
@@ -768,20 +772,6 @@ svg { display: block; }
 .ring text { font-family: var(--font-body); font-size: 10.5px; font-weight: 500; letter-spacing: 0.32em; text-transform: uppercase; fill: var(--ink-3); }
 .ring__core { position: absolute; inset: 30%; color: var(--ink); opacity: 0.85; }
 
-/* Hero floating chips */
-.hero__chips { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-.chip { position: absolute; will-change: transform; }
-.chip figure {
-  width: 100%; height: 100%; border-radius: 1.25rem; overflow: hidden;
-  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-  background: var(--ink-2);
-}
-.chip img { width: 100%; height: 100%; object-fit: cover; }
-.chip--1 { right: 9%; top: 24%; width: 11vw; aspect-ratio: 4 / 5; rotate: 6deg; }
-.chip--2 { right: 25%; top: 17%; width: 7.5vw; aspect-ratio: 1; rotate: -8deg; }
-.chip--3 { right: 6%; bottom: 20%; width: 8.5vw; aspect-ratio: 4 / 5; rotate: -5deg; }
-.chip--4 { left: 46%; top: 20%; width: 6.5vw; aspect-ratio: 1; rotate: 9deg; }
-@media (max-width: 1100px) { .hero__chips { display: none; } }
 
 /* Story background photo */
 .story__bg { position: absolute; inset: -20% -10%; z-index: 0; opacity: 0.16; filter: blur(2px) saturate(0.7); pointer-events: none; }
@@ -806,11 +796,11 @@ svg { display: block; }
 .zoom__media img { width: 100%; height: 100%; object-fit: cover; object-position: 60% 40%; will-change: transform; }
 .zoom__media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(21, 19, 17, 0.1), rgba(21, 19, 17, 0.55)); }
 .zoom__frame {
-  position: absolute; inset: 18% 30%; pointer-events: none;
-  display: flex; justify-content: space-between; align-items: flex-end; padding: 1.25rem;
-  font-size: 0.68rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3);
-  transform: translateY(2.5rem);
+  position: absolute; left: 50%; top: 50%; width: min(34vw, 34vh); aspect-ratio: 1; pointer-events: none;
+  translate: -50% -50%; border-radius: 50%; border: 1px solid rgba(21, 19, 17, 0.25);
 }
+.zoom__frame span { position: absolute; inset: -6%; border-radius: 50%; border: 1px dashed rgba(184, 135, 74, 0.5); animation: ring-spin 30s linear infinite; }
+@keyframes ring-spin { to { rotate: 360deg; } }
 .zoom__text {
   position: absolute; left: var(--gutter); right: var(--gutter); bottom: clamp(3rem, 8vh, 6rem);
   max-width: 640px; display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem;

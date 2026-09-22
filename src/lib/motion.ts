@@ -44,6 +44,7 @@ export function lockScroll(lock: boolean) {
      data-reveal-group     children stagger in
      data-clip             card wipes open from a rounded inset
      data-clip="up"        image wipes up from the bottom edge
+     data-clip="circle"    image opens as a growing circle from its centre
      data-parallax="0.2"   scrubbed vertical parallax (positive = slower)
      data-scale            image inside an overflow-hidden parent settles from 1.25 to 1
      data-draw             SVG strokes draw themselves
@@ -96,19 +97,22 @@ export function initScrollEffects(root: HTMLElement) {
     });
 
     root.querySelectorAll<HTMLElement>("[data-clip]").forEach((el) => {
-      const up = el.dataset.clip === "up";
+      const mode = el.dataset.clip;
+      const up = mode === "up";
+      const circle = mode === "circle";
       gsap.from(el, {
-        clipPath: up ? "inset(100% 0 0 0)" : "inset(22% 6% 22% 6% round 2rem)",
-        y: up ? 0 : 70,
-        scale: up ? 1 : 0.96,
-        duration: 1.6,
+        clipPath: circle ? "circle(0% at 50% 50%)" : up ? "inset(100% 0 0 0)" : "inset(22% 6% 22% 6% round 2rem)",
+        y: up || circle ? 0 : 70,
+        scale: up || circle ? 1 : 0.96,
+        duration: circle ? 1.8 : 1.6,
         delay: delayOf(el),
         ease: "expo.inOut",
         scrollTrigger: once(el, "top 90%"),
+        onComplete: () => { if (circle) gsap.set(el, { clipPath: "none" }); },
       });
-      if (up) {
+      if (up || circle) {
         const img = el.querySelector("img");
-        if (img) gsap.from(img, { scale: 1.25, duration: 1.8, delay: delayOf(el), ease: "expo.inOut", scrollTrigger: once(el, "top 90%") });
+        if (img) gsap.from(img, { scale: 1.3, duration: 2, delay: delayOf(el), ease: "expo.inOut", scrollTrigger: once(el, "top 90%") });
       }
     });
 
