@@ -655,8 +655,7 @@ export function Footer() {
           </nav>
           <div className="footer__col">
             <h4>Contacto</h4>
-            <a href={links.whatsapp}>+56 9 5858 4949</a>
-            <a href="tel:+56950006843">+56 9 5000 6843</a>
+            <a href={links.whatsapp}>+56 9 7879 2683</a>
             <a href={links.email}>contacto@allister-eyewear.com</a>
             <p>Av. Sergio Viera de Mello 4524, Macul, Santiago.<br />Tienda exclusivamente online.</p>
           </div>

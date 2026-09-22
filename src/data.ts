@@ -20,7 +20,7 @@ export const links = {
   instagram: "https://www.instagram.com/allistereyewear/",
   facebook: "https://www.facebook.com/allistereyewear",
   tiktok: "https://tiktok.com/@allistereyewear",
-  whatsapp: "https://wa.me/56958584949",
+  whatsapp: "https://wa.me/56978792683",
   email: "mailto:contacto@allister-eyewear.com",
 };
 
@@ -55,8 +55,8 @@ export const collections: Collection[] = [
   {
     id: "luxe",
     href: links.luxe,
-    img: "/assets/web/hero-sol-sin-reflejos.jpg",
-    alt: "Hombre con sombrero y anteojos de sol espejados naranja, colección LUXE",
+    img: "/assets/web/hero-generacion-a.jpg",
+    alt: "Pareja probándose anteojos frente al mar, colección LUXE",
     badge: "Envío gratis",
     kicker: "Sol · 112 modelos",
     title: "LUXE",
@@ -65,8 +65,8 @@ export const collections: Collection[] = [
   {
     id: "gen",
     href: links.genA,
-    img: "/assets/web/hero-generacion-a.jpg",
-    alt: "Pareja probándose anteojos ópticos frente al mar",
+    img: "/assets/web/hero-sol-sin-reflejos.jpg",
+    alt: "Hombre con sombrero y anteojos de sol espejados naranja, colección Generación-A",
     badge: "40% OFF",
     badgeAccent: true,
     kicker: "Sol · 31 modelos",

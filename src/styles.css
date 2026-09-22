@@ -433,7 +433,8 @@ svg { display: block; }
 }
 .card:hover .card__glare { opacity: 1; }
 .card--oferta .card__media img { object-position: 60% 30%; }
-.card--gen .card__media img { object-position: 50% 30%; }
+.card--gen .card__media img { object-position: 60% 30%; }
+.card--luxe .card__media img { object-position: 50% 30%; }
 .card--lectura .card__media img { object-position: 50% 20%; }
 
 .badge {

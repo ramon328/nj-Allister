@@ -218,7 +218,7 @@ export function TopBar() {
               <img src="/assets/web/banner-luxe-ryder-mujer.jpg" alt="Mujer con anteojos Ryder espejados de Allister" loading="lazy" />
             </div>
             <p className="menu__contact">
-              <a href={links.whatsapp}>+56 9 5858 4949</a>
+              <a href={links.whatsapp}>+56 9 7879 2683</a>
               <a href={links.email}>contacto@allister-eyewear.com</a>
             </p>
             <p className="menu__social">
