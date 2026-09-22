@@ -3,3 +3,5 @@ dist
 .playwright-mcp
 .context
 .DS_Store
+.vercel
+.vercel
