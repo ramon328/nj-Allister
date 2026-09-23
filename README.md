@@ -1,54 +1,55 @@
-# Allister Eyewear — rediseño 2026
+# Allister Eyewear — tienda online
 
-Landing rediseñada para [allister-eyewear.com](https://allister-eyewear.com/) con React 19 + Vite + TypeScript, CSS vanilla, GSAP (ScrollTrigger, SplitText, DrawSVG) y Lenis para scroll suave.
+E-commerce de anteojos para [allister-eyewear.com](https://allister-eyewear.com/): Next.js 16 (App Router) + Supabase (Postgres, Auth, Storage) + Mercado Pago Checkout Pro. Diseño editorial con GSAP (ScrollTrigger, SplitText, DrawSVG) y Lenis.
 
-## Correr
+## Qué incluye
+
+- **Portada** con las animaciones del rediseño (hero con slideshow en círculo, bento de colecciones, historia, zoom, lookbook horizontal, blog, newsletter) y una grilla de productos destacados.
+- **Catálogo** `/coleccion` con filtros por colección, tipo (sol/óptico/lectura), búsqueda, orden y paginación.
+- **Producto** `/lentes/[slug]`: galería, precio y descuento, otros colores del mismo modelo, variantes (fuerza óptica), agregar al carro, relacionados, JSON-LD.
+- **Carro** en panel lateral y página `/carrito`, guardado en localStorage.
+- **Checkout de invitado** `/checkout`: datos, dirección con comunas y códigos postales de Chile, código de descuento (HOLA10 10% precargado), términos. Crea el pedido, descuenta stock y calcula despacho (gratis desde $39.900, configurable).
+- **Pedido** `/pedido/[id]?k=token`: resumen, aceptación expresa del total, pago con Mercado Pago, cancelación, historial. `/pedido` para seguir un pedido por número + correo.
+- **Mercado Pago**: creación de preferencia, webhook con verificación de firma y consulta a la API, conciliación automática si el webhook se pierde, reembolsos desde el panel.
+- **Panel** `/admin` (Supabase Auth): resumen y ventas, pedidos (estados, despacho, seguimiento, notas, alertas de pago), productos (CRUD, stock en línea, subida de fotos optimizadas a Storage), colecciones, códigos de descuento, configuración (despacho, envío gratis, WhatsApp, barra de anuncios), Mercado Pago (cuenta y pagos).
+- **Cron** horario: cancela pedidos sin pago a las 48 h (devuelve stock), concilia pagos, limpia límites por IP.
+- **Correos** opcionales vía Resend: pedido recibido, pago confirmado, enviado, cancelado, y aviso interno de venta.
+- **Modo Próximamente** con `COMING_SOON=1` para el dominio público mientras se revisa.
+
+## Correr en local
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm run build    # genera dist/
-npm run preview  # sirve dist/
+cp .env.example .env.local   # completa las variables
+npm run db:migrate           # aplica supabase/migrations/*.sql
+npm run db:seed              # carga los 250 productos exportados de Shopify
+npm run admin:create -- tu@correo.cl   # crea el usuario del panel (imprime la contraseña)
+npm run dev
 ```
+
+## Variables de entorno
+
+Ver `.env.example`. Las obligatorias: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` (solo para scripts), `NEXT_PUBLIC_SITE_URL`. Para cobrar: `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET`. Para el cron: `CRON_SECRET`. Para correos: `RESEND_API_KEY`, `MAIL_FROM`, `MAIL_NOTIFY`.
+
+## Conectar Mercado Pago
+
+1. Crear una aplicación tipo Checkout Pro en [mercadopago.cl/developers](https://www.mercadopago.cl/developers/panel/app).
+2. Copiar el *Access Token* de producción en `MP_ACCESS_TOKEN`.
+3. En Webhooks, registrar `https://<dominio>/api/webhooks/mercadopago` con el evento **Pagos** y copiar la clave secreta en `MP_WEBHOOK_SECRET`.
+4. Redesplegar. `/admin/mercadopago` muestra la cuenta y los pagos.
+
+Con credenciales de prueba (`TEST-…`) el mismo flujo abre el checkout de prueba.
 
 ## Estructura
 
-- `src/App.tsx` — composición de la página.
-- `src/components/Chrome.tsx` — preloader, cursor, barra de anuncios, nav y menú fullscreen.
-- `src/components/Sections.tsx` — hero, marquee, colecciones (bento), historia, beneficios, lookbook, blog, newsletter, footer.
-- `src/components/ui.tsx` — botón isla magnético, eyebrow, link subrayado.
-- `src/lib/motion.ts` — GSAP + Lenis. Sistema declarativo por atributos: `data-split`, `data-reveal`, `data-reveal-group`, `data-clip`, `data-parallax`, `data-scale`, `data-draw`, `data-counter`.
-- `src/hooks/useMotion.ts` — botones magnéticos y spotlight con `gsap.quickTo`.
-- `src/data.ts` — textos, links reales a Shopify y rutas de imágenes.
-- `src/styles.css` — sistema de diseño (cream/espresso/ámbar, Clash Display + Satoshi).
+- `src/app/(site)` — páginas públicas. `src/app/admin` — panel. `src/app/api` — webhook, cron, búsqueda.
+- `src/features/site` — landing animada (componentes, `motion.ts` con el sistema declarativo `data-split`, `data-reveal`, `data-clip`, `data-parallax`…).
+- `src/features/catalog|cart|orders|auth|admin` — queries, server actions, schemas (zod) y UI.
+- `src/lib` — Supabase (server/admin/proxy), sesión y roles, Mercado Pago, correo, comunas y códigos postales.
+- `supabase/migrations/0001_init.sql` — esquema completo con RLS, funciones (`create_guest_order`, `expire_pending_orders`, `rate_allow`, `search_catalog`) y bucket `productos`.
+- `supabase/data/shopify` — exportación del catálogo original para el seed.
+- `public/assets` — fotos y video de la marca (las de producto quedan en `img/products` como respaldo; la tienda usa las URLs del CDN de Shopify hasta que se suban fotos nuevas desde el panel).
 
-## Assets
+## Seguridad
 
-Todo lo extraído del sitio original vive en `public/assets/`:
-
-- `img/hero`, `img/banners`, `img/instagram`, `img/blog`, `img/collections`, `img/brand` — originales en alta resolución.
-- `img/products` — fotos de producto (35 modelos, 2 vistas c/u) y `products.json` con títulos, precios y URLs. **No se publican en la página**, quedan guardadas para uso futuro.
-- `video/allister-hero.mp4` (original, 14 MB), `allister-hero-1080.mp4` (desktop, 6.5 MB) y `allister-hero-720.mp4` (móvil, 1.6 MB), ambos sin audio.
-- `web/` — copias que usa la página: JPEG calidad 92 sin submuestreo de croma, hasta 2560px de ancho. Los originales que Shopify solo tenía en 1000px pasaron por Real-ESRGAN 4x (Upscayl, modelo high-fidelity) y se sirven a 2000px. Logo recortado con fondo transparente.
-
-## Animaciones
-
-- Preloader con contador y cortina que se pliega.
-- Hero: letras del título entran con rotación 3D, video hace settle desde blur, parallax con el mouse, y la página cubre el hero al scrollear (hero sticky).
-- Marquee que acelera y se inclina según la velocidad del scroll.
-- Bento: cards se abren por clip-path, tilt 3D con glare, spotlight, parallax interno.
-- Historia: líneas de texto salen de máscara, contadores, fotos con wipe y parallax a distintas velocidades.
-- Beneficios: iconos se dibujan (DrawSVG).
-- Lookbook: sección fijada con scroll horizontal, skew por velocidad, parallax en cada foto.
-- Footer: queda debajo y se revela al terminar la página; ALLISTER gigante sube letra por letra.
-- Hero: slideshow de video + 5 fotos; cada foto se abre como un círculo desde un punto aleatorio sobre la anterior, con contador 01/06.
-- Fondo: orbes ámbar que derivan, palabras gigantes en outline que se desplazan con el scroll, foto de fondo con parallax en Historia, anillo de texto que rota.
-- Sección Zoom: una foto se abre en círculo hasta pantalla completa mientras la sección queda fijada. Las fotos de Historia también se revelan en círculo.
-- Lookbook: al mover el mouse sobre el título aparecen fotos que se desvanecen (image trail).
-- Cursor custom con etiqueta contextual ("Ver colección", "Leer").
-- Todo respeta `prefers-reduced-motion`.
-
-## Pendientes para producción
-
-- El formulario de newsletter valida en cliente; conectar al `customer form` de Shopify o a la app de email.
-- Los enlaces apuntan al Shopify actual. Para integrar como tema, portar las secciones a Liquid o montar la landing como página independiente.
+RLS en todas las tablas (default deny); las funciones que tocan pedidos solo se ejecutan con service role desde el servidor; precios y stock se validan en Postgres al crear el pedido; el estado `paid` solo lo escribe el webhook o la conciliación (nunca el redirect del navegador); límites por IP en checkout, login, seguimiento, códigos y webhook; token del pedido comparado en tiempo constante y transportado por cookie httpOnly al volver de Mercado Pago; marcar pagado a mano exige superadmin y una nota.
